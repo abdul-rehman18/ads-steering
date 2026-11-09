@@ -1,0 +1,4 @@
+date,platform,entity,field,old,new,user
+2026-10-02,google,IT PMax,target_roas,3.5,3.2,freja@brand.example
+2026-10-28,merchant_center,DE feed,feed_file,feed_de_v41.xml,feed_de_v42.xml,feed-app
+2026-11-01,meta,NL Prospecting,daily_budget,292.0,700.0,jonas@brand.example

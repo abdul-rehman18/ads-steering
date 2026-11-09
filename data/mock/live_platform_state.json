@@ -1,0 +1,226 @@
+{
+  "google": {
+    "DE PMax": {
+      "id": "cmp_de_pmax",
+      "status": "ENABLED",
+      "daily_budget": 800.0
+    },
+    "DE Search Brand": {
+      "id": "cmp_de_sear",
+      "status": "ENABLED",
+      "daily_budget": 200.0
+    },
+    "FR PMax": {
+      "id": "cmp_fr_pmax",
+      "status": "ENABLED",
+      "daily_budget": 600.0
+    },
+    "FR Search Brand": {
+      "id": "cmp_fr_sear",
+      "status": "ENABLED",
+      "daily_budget": 150.0
+    },
+    "NL PMax": {
+      "id": "cmp_nl_pmax",
+      "status": "ENABLED",
+      "daily_budget": 333.0
+    },
+    "NL Search Brand": {
+      "id": "cmp_nl_sear",
+      "status": "ENABLED",
+      "daily_budget": 83.0
+    },
+    "DK PMax": {
+      "id": "cmp_dk_pmax",
+      "status": "ENABLED",
+      "daily_budget": 240.0
+    },
+    "DK Search Brand": {
+      "id": "cmp_dk_sear",
+      "status": "ENABLED",
+      "daily_budget": 60.0
+    },
+    "SE PMax": {
+      "id": "cmp_se_pmax",
+      "status": "ENABLED",
+      "daily_budget": 240.0
+    },
+    "SE Search Brand": {
+      "id": "cmp_se_sear",
+      "status": "ENABLED",
+      "daily_budget": 60.0
+    },
+    "IT PMax": {
+      "id": "cmp_it_pmax",
+      "status": "ENABLED",
+      "daily_budget": 400.0
+    },
+    "IT Search Brand": {
+      "id": "cmp_it_sear",
+      "status": "ENABLED",
+      "daily_budget": 100.0
+    },
+    "ES PMax": {
+      "id": "cmp_es_pmax",
+      "status": "ENABLED",
+      "daily_budget": 373.0
+    },
+    "ES Search Brand": {
+      "id": "cmp_es_sear",
+      "status": "ENABLED",
+      "daily_budget": 93.0
+    },
+    "AT PMax": {
+      "id": "cmp_at_pmax",
+      "status": "ENABLED",
+      "daily_budget": 160.0
+    },
+    "AT Search Brand": {
+      "id": "cmp_at_sear",
+      "status": "ENABLED",
+      "daily_budget": 40.0
+    },
+    "BE PMax": {
+      "id": "cmp_be_pmax",
+      "status": "ENABLED",
+      "daily_budget": 187.0
+    },
+    "BE Search Brand": {
+      "id": "cmp_be_sear",
+      "status": "ENABLED",
+      "daily_budget": 47.0
+    },
+    "PL PMax": {
+      "id": "cmp_pl_pmax",
+      "status": "ENABLED",
+      "daily_budget": 133.0
+    },
+    "PL Search Brand": {
+      "id": "cmp_pl_sear",
+      "status": "ENABLED",
+      "daily_budget": 33.0
+    },
+    "US PMax": {
+      "id": "cmp_us_pmax",
+      "status": "ENABLED",
+      "daily_budget": 1067.0
+    },
+    "US Search Brand": {
+      "id": "cmp_us_sear",
+      "status": "ENABLED",
+      "daily_budget": 267.0
+    }
+  },
+  "meta": {
+    "DE Prospecting": {
+      "id": "as_de_pros",
+      "status": "ACTIVE",
+      "daily_budget": 700.0
+    },
+    "DE Retargeting": {
+      "id": "as_de_reta",
+      "status": "ACTIVE",
+      "daily_budget": 300.0
+    },
+    "FR Prospecting": {
+      "id": "as_fr_pros",
+      "status": "ACTIVE",
+      "daily_budget": 525.0
+    },
+    "FR Retargeting": {
+      "id": "as_fr_reta",
+      "status": "ACTIVE",
+      "daily_budget": 225.0
+    },
+    "NL Prospecting": {
+      "id": "as_nl_pros",
+      "status": "ACTIVE",
+      "daily_budget": 700.0
+    },
+    "NL Retargeting": {
+      "id": "as_nl_reta",
+      "status": "ACTIVE",
+      "daily_budget": 125.0
+    },
+    "DK Prospecting": {
+      "id": "as_dk_pros",
+      "status": "ACTIVE",
+      "daily_budget": 210.0
+    },
+    "DK Retargeting": {
+      "id": "as_dk_reta",
+      "status": "ACTIVE",
+      "daily_budget": 90.0
+    },
+    "SE Prospecting": {
+      "id": "as_se_pros",
+      "status": "ACTIVE",
+      "daily_budget": 210.0
+    },
+    "SE Retargeting": {
+      "id": "as_se_reta",
+      "status": "ACTIVE",
+      "daily_budget": 90.0
+    },
+    "IT Prospecting": {
+      "id": "as_it_pros",
+      "status": "ACTIVE",
+      "daily_budget": 350.0
+    },
+    "IT Retargeting": {
+      "id": "as_it_reta",
+      "status": "ACTIVE",
+      "daily_budget": 150.0
+    },
+    "ES Prospecting": {
+      "id": "as_es_pros",
+      "status": "ACTIVE",
+      "daily_budget": 327.0
+    },
+    "ES Retargeting": {
+      "id": "as_es_reta",
+      "status": "ACTIVE",
+      "daily_budget": 140.0
+    },
+    "AT Prospecting": {
+      "id": "as_at_pros",
+      "status": "ACTIVE",
+      "daily_budget": 140.0
+    },
+    "AT Retargeting": {
+      "id": "as_at_reta",
+      "status": "ACTIVE",
+      "daily_budget": 60.0
+    },
+    "BE Prospecting": {
+      "id": "as_be_pros",
+      "status": "ACTIVE",
+      "daily_budget": 163.0
+    },
+    "BE Retargeting": {
+      "id": "as_be_reta",
+      "status": "ACTIVE",
+      "daily_budget": 70.0
+    },
+    "PL Prospecting": {
+      "id": "as_pl_pros",
+      "status": "ACTIVE",
+      "daily_budget": 117.0
+    },
+    "PL Retargeting": {
+      "id": "as_pl_reta",
+      "status": "ACTIVE",
+      "daily_budget": 50.0
+    },
+    "US Prospecting": {
+      "id": "as_us_pros",
+      "status": "ACTIVE",
+      "daily_budget": 933.0
+    },
+    "US Retargeting": {
+      "id": "as_us_reta",
+      "status": "ACTIVE",
+      "daily_budget": 400.0
+    }
+  }
+}

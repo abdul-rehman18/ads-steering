@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ads Steering Architecture</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: one reading column. Colour always means who acts: data, code, Claude, a check that can stop the run,
+   or a named person. The queue lifecycle is the centre of the page because it is what was asked for. */
+:root{
+  --paper:#F4F6F5; --sheet:#FFFFFF; --ink:#15201D; --muted:#5B6863; --line:#D9E0DD;
+  --src:#6E7A76; --src-bg:#EEF1F0;
+  --code:#2F5D8A; --code-bg:#E7EEF6;
+  --ai:#9A5B12; --ai-bg:#FBF0E1;
+  --gate:#1F7A55; --gate-bg:#E3F3EB;
+  --human:#6B3FA0; --human-bg:#F0E9F8;
+  --hold:#B3362F; --hold-bg:#FBE9E7;
+  --display:"Archivo",ui-sans-serif,system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0F1513; --sheet:#151D1A; --ink:#E6ECE9; --muted:#9AA7A2; --line:#26312D;
+  --src:#A3AEAA; --src-bg:#1C2522; --code:#8DB6E3; --code-bg:#16222F; --ai:#E8A85A; --ai-bg:#2A2015;
+  --gate:#6BCF9F; --gate-bg:#132A20; --human:#C3A2EC; --human-bg:#231B2F; --hold:#F07A71; --hold-bg:#2E1715; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0F1513; --sheet:#151D1A; --ink:#E6ECE9; --muted:#9AA7A2; --line:#26312D;
+  --src:#A3AEAA; --src-bg:#1C2522; --code:#8DB6E3; --code-bg:#16222F; --ai:#E8A85A; --ai-bg:#2A2015;
+  --gate:#6BCF9F; --gate-bg:#132A20; --human:#C3A2EC; --human-bg:#231B2F; --hold:#F07A71; --hold-bg:#2E1715; color-scheme:dark}
+
+body{background:var(--paper);color:var(--ink);font-family:var(--display);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1040px;margin:0 auto;padding-block:40px 64px;display:flex;flex-direction:column;gap:52px}
+h1,h2,h3{margin:0;text-wrap:balance}
+h1{font-size:clamp(30px,5vw,46px);line-height:1.08;font-weight:800;font-stretch:88%;letter-spacing:-.01em;max-width:24ch}
+h2{font-size:clamp(22px,3vw,28px);font-weight:750;font-stretch:92%}
+h3{font-size:16px;font-weight:700}
+p{margin:0;max-width:68ch}
+code{font-family:var(--mono);font-size:.86em}
+.eyebrow{font:600 12px/1.4 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.lead{font-size:18px;color:var(--muted)}
+header,section{display:flex;flex-direction:column;gap:16px}
+.legend{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;font:600 13px/1 var(--display);border:1px solid var(--line);background:var(--sheet)}
+.chip i{width:10px;height:10px;border-radius:3px;display:block}
+.k-src i{background:var(--src)} .k-code i{background:var(--code)} .k-ai i{background:var(--ai)} .k-gate i{background:var(--gate)} .k-hum i{background:var(--human)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.box{min-width:0;display:flex;flex-direction:column;gap:6px;padding:14px 14px 14px 16px;border-radius:9px;border-left:4px solid;font-size:14.5px;line-height:1.45}
+.box .who{font:600 10.5px/1 var(--mono);text-transform:uppercase;letter-spacing:.08em}
+.box b{font-size:15px}
+.box span{color:var(--muted)}
+.s-src{background:var(--src-bg);border-color:var(--src)} .s-src .who{color:var(--src)}
+.s-code{background:var(--code-bg);border-color:var(--code)} .s-code .who{color:var(--code)}
+.s-ai{background:var(--ai-bg);border-color:var(--ai)} .s-ai .who{color:var(--ai)}
+.s-gate{background:var(--gate-bg);border-color:var(--gate)} .s-gate .who{color:var(--gate)}
+.s-hum{background:var(--human-bg);border-color:var(--human)} .s-hum .who{color:var(--human)}
+.s-hold{background:var(--hold-bg);border-color:var(--hold)} .s-hold .who{color:var(--hold)}
+
+/* queue lifecycle */
+.life{background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.flow{display:flex;flex-wrap:wrap;align-items:stretch;row-gap:12px}
+.flow .box{flex:1 1 140px}
+.arrow{flex:0 0 22px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.arrow::before{content:"→"}
+.exits{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+@media (max-width:760px){.flow{flex-direction:column}.arrow::before{content:"↓"}.flow .box{flex:0 0 auto}}
+
+.sched{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.sched{grid-template-columns:1fr}}
+.card{background:var(--sheet);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card .when{font:700 20px/1.1 var(--display);font-variant-numeric:tabular-nums}
+.card ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:14.5px;color:var(--muted)}
+
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--sheet)}
+table{border-collapse:collapse;width:100%;min-width:660px;font-size:14px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 11px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);background:var(--paper)}
+tr:last-child td{border-bottom:0}
+td.k{font-family:var(--mono);font-size:13px;white-space:nowrap}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font:600 12px/1.5 var(--mono);white-space:nowrap}
+.p-auto{background:var(--gate-bg);color:var(--gate)} .p-appr{background:var(--human-bg);color:var(--human)} .p-man{background:var(--src-bg);color:var(--src)}
+.p-sup{background:var(--hold-bg);color:var(--hold)} .p-out{background:var(--gate-bg);color:var(--gate)} .p-cant{background:var(--ai-bg);color:var(--ai)}
+
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.rules div{background:var(--sheet);border:1px solid var(--line);border-radius:9px;padding:12px 14px;font-size:14.5px}
+.rules b{display:block;font-size:15px;margin-bottom:2px}
+.note{font-size:13.5px;color:var(--muted)}
+footer{border-top:1px solid var(--line);padding-top:20px;display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-between;color:var(--muted);font-size:14px}
+footer a{color:var(--code)}
+a:focus-visible{outline:2px solid var(--code);outline-offset:2px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Architecture · Google Ads + Meta Ads · 10 EU countries + US · mock data</div>
+  <h1>One queue, one owner per item, and nothing counts as done until the platform says so.</h1>
+  <p class="lead">A steering system that keeps each country on its monthly budget, judged on Shopify revenue. It audits weekly, finds root causes, and acts through a single queue: proposal, approval, dry run, apply, read back, undo. Shown here on 60 days of mock data with three problems planted on purpose.</p>
+  <div class="legend" aria-label="Colour key">
+    <span class="chip k-src"><i></i>Data source</span>
+    <span class="chip k-code"><i></i>Plain code</span>
+    <span class="chip k-ai"><i></i>Claude</span>
+    <span class="chip k-gate"><i></i>Check that can stop it</span>
+    <span class="chip k-hum"><i></i>Named person</span>
+  </div>
+</header>
+
+<section>
+  <h2>Sources</h2>
+  <p>Shopify is the only source of truth for revenue. Meta and Google both claim some of the same orders, so their ROAS is shown but never added up and never used to steer.</p>
+  <div class="grid">
+    <div class="box s-src"><span class="who">Truth</span><b>Shopify orders</b><span>Revenue per country, and per campaign through the UTM on each order</span></div>
+    <div class="box s-src"><span class="who">Spend</span><b>Google Ads</b><span>Campaign spend, budgets, claimed conversions, search terms, change history</span></div>
+    <div class="box s-src"><span class="who">Spend</span><b>Meta Ads</b><span>Ad set spend and budgets, ad level frequency, Purchase events with pixel and event id</span></div>
+    <div class="box s-src"><span class="who">Feed</span><b>Merchant Center</b><span>Products submitted and disapproved per country, with the reason</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>Schedule</h2>
+  <div class="sched">
+    <div class="card"><div class="eyebrow">Every day</div><div class="when">06:00 CET</div>
+      <ol><li>Is every source fresh? If not, freeze raises</li><li>Do platform claims still match Shopify? If not, freeze that country and open a task</li><li>Did any campaign's Shopify revenue collapse? Run root cause, open a task</li><li>Did anyone change a budget by hand against the rules?</li><li>Pace each country against its month</li><li>Apply only the small trims the rules allow</li></ol></div>
+    <div class="card"><div class="eyebrow">Every Monday</div><div class="when">07:00 CET</div>
+      <ol><li>Search terms with spend and no sales</li><li>Feed disapprovals</li><li>Tracking problems</li><li>Creative fatigue</li><li>Pacing, then a short summary for Slack</li></ol></div>
+    <div class="card"><div class="eyebrow">When a person acts</div><div class="when">Any time</div>
+      <ol><li>Approve or reject an item</li><li>Apply it: dry run, write, read back</li><li>Undo it, through the same path</li><li>Mark a manual task done</li></ol></div>
+  </div>
+</section>
+
+<section>
+  <h2>The queue</h2>
+  <p>Every change and every task lives in one queue, stored in SQLite with a change log and a full event history. Each item has an owner and a deadline. The same problem is queued once.</p>
+  <div class="life">
+    <div class="flow">
+      <div class="box s-code"><span class="who">Code</span><b>Proposed</b><span>With the reason, the numbers behind it, and any trade off</span></div>
+      <div class="arrow" aria-hidden="true"></div>
+      <div class="box s-hum"><span class="who">Named person</span><b>Approved</b><span>Name and time recorded. Small lowers within the rules skip this step</span></div>
+      <div class="arrow" aria-hidden="true"></div>
+      <div class="box s-gate"><span class="who">Check</span><b>Still valid?</b><span>Live value unchanged since proposal. Every rule checked again now</span></div>
+      <div class="arrow" aria-hidden="true"></div>
+      <div class="box s-gate"><span class="who">Check</span><b>Dry run</b><span>The platform says what it would store, without writing</span></div>
+      <div class="arrow" aria-hidden="true"></div>
+      <div class="box s-code"><span class="who">Code</span><b>Applied</b><span>Old value saved first, so it can always be undone</span></div>
+      <div class="arrow" aria-hidden="true"></div>
+      <div class="box s-gate"><span class="who">Check</span><b>Verified</b><span>Read back from the platform and it matches the dry run</span></div>
+    </div>
+    <div class="exits">
+      <div class="box s-hold"><span class="who">Stops here</span><b>Stale</b><span>Someone changed the budget by hand in the meantime. Nothing is written</span></div>
+      <div class="box s-hold"><span class="who">Stops here</span><b>Failed</b><span>Rule broken at apply time, dry run refused, or the read back does not match</span></div>
+      <div class="box s-hum"><span class="who">Named person</span><b>Undone</b><span>A new item that puts the old value back, through the same steps</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Approval model</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Item</th><th>Owner</th><th>Who can approve</th><th>Can it run alone?</th></tr></thead>
+    <tbody>
+      <tr><td>Budget trim of 10% or less, only on a campaign that overspends and earns below the floor</td><td>Freja</td><td>Not needed</td><td><span class="pill p-auto">auto, within rules</span></td></tr>
+      <tr><td>Bigger budget lower, or any raise</td><td>Freja</td><td>Mikkel only, because it is money</td><td><span class="pill p-appr">needs approval</span></td></tr>
+      <tr><td>Negative keyword</td><td>Freja</td><td>Mikkel or Freja</td><td><span class="pill p-appr">needs approval</span></td></tr>
+      <tr><td>Fix feed, fix tracking, refresh creative</td><td>Freja or Jonas</td><td>Done by the owner</td><td><span class="pill p-man">manual task</span></td></tr>
+      <tr><td>Put back a budget someone raised by hand</td><td>Freja</td><td>Mikkel only</td><td><span class="pill p-appr">needs approval</span></td></tr>
+      <tr><td>Undo</td><td>Freja</td><td>Mikkel for budgets, Mikkel or Freja for negatives</td><td><span class="pill p-appr">needs approval</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Names and limits live in one config file. In the demo, Freja tries to approve the NL budget cut and is refused, then Mikkel approves it.</p>
+</section>
+
+<section>
+  <h2>Rules it cannot break</h2>
+  <div class="rules">
+    <div><b>Never pause</b>Only lower a budget, never to zero, never below 5 EUR a day</div>
+    <div><b>Raise slowly</b>At most +20% per step, at least 3 days apart per campaign or ad set, counting raises made by hand in the platforms</div>
+    <div><b>Never ramp across months</b>No raises in the last 3 days of a month, and every budget goes back to plan on the 1st</div>
+    <div><b>No raises on bad data</b>Frozen in a country with broken tracking, late data or an open root cause</div>
+    <div><b>Shopify decides</b>A campaign is only raised if it earns at least 2.5 EUR of Shopify revenue per EUR spent</div>
+    <div><b>Checked twice</b>The hard rules, the freezes and the automatic limit are checked when proposed and again at the moment of writing</div>
+  </div>
+</section>
+
+<section>
+  <h2>Where Claude sits</h2>
+  <div class="grid">
+    <div class="box s-ai"><span class="who">Claude</span><b>Judges search terms</b><span>Code picks terms with spend and no sales. Claude says which ones nobody buying a plush toy would type. Code refuses any negative that holds a product word or a word buyers also use, so "free plush toy sewing pattern" becomes "sewing pattern", and "fabrication" (made in France) is never used</span></div>
+    <div class="box s-ai"><span class="who">Claude</span><b>Writes the Monday summary</b><span>Every number is a reference that code fills in. A digit typed by Claude rejects the summary and a plain template goes out</span></div>
+    <div class="box s-code"><span class="who">Code, not Claude</span><b>Everything else</b><span>Pacing, budgets, root cause tests and every write. Without an API key the system still runs on plain rules</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>The three planted problems</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Problem</th><th>Caught by</th><th>What the system did</th></tr></thead>
+    <tbody>
+      <tr><td><b>DE Performance Max</b><br>Shopify revenue 2,862 to 506 EUR a day from 28 Oct</td><td>Daily collapse check, then root cause</td><td><span class="pill p-sup">SUPPORTED</span> feed disapprovals, 3% to 65%, missing GTIN, feed file changed that day<br><span class="pill p-out">RULED OUT</span> budget, bid changes, tracking, shop, market wide<br><span class="pill p-cant">CANNOT TELL</span> stock outs, competitors, with the data that would settle each<br>Raises frozen in DE. Feed task to Freja</td></tr>
+      <tr><td><b>FR Meta</b><br>every purchase counted twice from 20 Oct</td><td>Daily tracking check</td><td>Meta says ROAS 10.5, Shopify says 3.7. Two pixels on every order. A platform ROAS system would raise FR. This one freezes raises and gives Jonas the task the same morning</td></tr>
+      <tr><td><b>NL Prospecting</b><br>raised by hand from 292 to 700 on 1 Nov</td><td>Daily pacing and the platform change history</td><td>On course for 36,369 EUR against 25,000. The raise broke the 20% rule, came from someone who cannot approve money, and its Shopify return fell below the floor. Proposes going back to 292, the level that worked, and says the month still ends about 10% over. Mikkel approves, dry run, apply, read back, then undo shown. A task is opened to talk to Jonas</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Five ways it breaks in production</h2>
+  <div class="grid">
+    <div class="box s-gate"><span class="who">Guard</span><b>Tracking breaks</b><span>Steer on Shopify only. Claims vs orders checked daily. Raises frozen</span></div>
+    <div class="box s-gate"><span class="who">Guard</span><b>Write says OK but did not happen</b><span>Read back against the dry run. Failed if different, and the owner is told</span></div>
+    <div class="box s-gate"><span class="who">Guard</span><b>Hand edit in the meantime</b><span>Live value checked before writing. Marked stale, nothing written</span></div>
+    <div class="box s-gate"><span class="who">Guard</span><b>Late data</b><span>Yesterday missing from any source freezes raises everywhere</span></div>
+    <div class="box s-gate"><span class="who">Guard</span><b>Changes pile up</b><span>Queued once a day, rules and freezes rechecked at write, hand edits count, reset to plan each month</span></div>
+  </div>
+  <p class="note">Each guard has a test. Not built in this slice: real API sign in, Slack approval buttons, the scheduler itself, currency conversion.</p>
+</section>
+
+<footer>
+  <span>Built by Abdul Rehman · mock data and a mock ads API</span>
+  <span>Code: <a href="https://github.com/abdul-rehman18/ads-steering">github.com/abdul-rehman18/ads-steering</a></span>
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,30 @@
+# Who owns what, who may approve what, and the rules the system can never break.
+people:
+  mikkel: {name: Mikkel, role: founder}
+  freja:  {name: Freja, role: performance marketing}
+  jonas:  {name: Jonas, role: operations and tracking}
+
+# Every queue item gets an owner by kind, and a deadline in days from when it was raised.
+owners:
+  budget_change:   {owner: freja, deadline_days: 1}
+  add_negative:    {owner: freja, deadline_days: 3}
+  fix_feed:        {owner: freja, deadline_days: 1}
+  fix_tracking:    {owner: jonas, deadline_days: 1}
+  investigate:     {owner: freja, deadline_days: 2}
+  refresh_creative: {owner: freja, deadline_days: 5}
+  remove_negative: {owner: freja, deadline_days: 1}
+
+# Anything involving money needs one of these people. Recorded with name and time.
+approvers:
+  money: [mikkel]
+  non_money: [mikkel, freja]
+
+rules:
+  max_raise_pct: 20            # one step can raise a budget by at most this much
+  min_days_between_raises: 3   # per campaign or ad set
+  no_raise_last_days_of_month: 3   # never ramp into the next month
+  auto_lower_max_pct: 10       # lowers up to this size may run without approval
+  pacing_tolerance_pct: 5      # projected month spend may sit this far over plan before acting
+  min_daily_budget_eur: 5
+  min_shopify_roas_to_raise: 2.5
+  stale_data_hours: 36

@@ -1,0 +1,18 @@
+currency: EUR
+monthly:
+  DE: 60000
+  FR: 45000
+  NL: 25000
+  DK: 18000
+  SE: 18000
+  IT: 30000
+  ES: 28000
+  AT: 12000
+  BE: 14000
+  PL: 10000
+  US: 80000
+split:
+  PMax: 0.4
+  Search Brand: 0.1
+  Prospecting: 0.35
+  Retargeting: 0.15
