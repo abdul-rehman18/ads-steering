@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
 import pathlib
 import shutil
 import sys
@@ -120,16 +121,22 @@ def weekly(cfg, data, api, q, today=TODAY, out=print, claude=None):
     for f in a["feed"]:
         facts[f"n{k:02d}"] = (f"{f['country']} products disapproved ({f['reason']})", f"{f['disapproved']} of {f['submitted']}"); k += 1
     for t in a["tracking"]:
-        facts[f"n{k:02d}"] = (f"{t['country']} {t['platform']} ROAS as the platform reports it, last 7 days", str(t["platform_roas_7d"])); k += 1
-        facts[f"n{k:02d}"] = (f"{t['country']} {t['platform']} ROAS by Shopify orders, last 7 days", str(t["shopify_roas_7d"])); k += 1
+        facts[f"n{k:02d}"] = (f"{t['country']} {t['platform']} ROAS as the platform reports it, last week", str(t["platform_roas_7d"])); k += 1
+        facts[f"n{k:02d}"] = (f"{t['country']} {t['platform']} ROAS by Shopify orders, last week", str(t["shopify_roas_7d"])); k += 1
     for f in a["fatigue"]:
-        facts[f"n{k:02d}"] = (f"times a week people see '{f['ad']}'", str(f["frequency_7d"])); k += 1
+        facts[f"n{k:02d}"] = (f"times a week people see the {_no_digits(f['ad'])} ad", str(f["frequency_7d"])); k += 1
     for p in a.get("pacing", []):
         facts[f"n{k:02d}"] = (f"{p['country']} projected month spend vs budget", f"{p['projected']:,} vs {p['budget']:,} EUR"); k += 1
     fallback = "This week: " + "; ".join(f"{m} {v}" for m, v in facts.values()) + ". Owners and deadlines are in the queue."
     text, how = llm.weekly_summary(claude, facts, fallback)
     out(f"\nMonday summary for Slack (written by {how}):\n{text}")
     return a
+
+
+def _no_digits(name):
+    """Names Claude must repeat may not hold digits, or the number check would reject an honest summary."""
+    import re
+    return re.sub(r"\s+", " ", re.sub(r"\bad \d+\b|\d", "", name)).replace("( ", "(").strip()
 
 
 def show_queue(q, out=print):
@@ -201,14 +208,115 @@ def demo(out=print):
         out(f"\nClaude: {u['calls']} calls, {u['input_tokens']} tokens in, {u['output_tokens']} out")
 
 
+def show(out=print, pause=None):
+    """Presenter mode for a walkthrough. One story per screen, Enter for the next."""
+    if pause is None:
+        pause = lambda: input("\n   Press Enter for the next part ...")
+    work = ROOT / "work" / "show"
+    shutil.rmtree(work, ignore_errors=True)
+    cfg, data, api, q = setup(work)
+    claude = llm.Claude()
+    silent = []
+    frozen, fresh, issues, collapses = compute_frozen(cfg, data, TODAY)
+    collapses = daily(cfg, data, api, q, out=silent.append)
+    rows = {r["country"]: r for r in steering.pacing(data, api, cfg)}
+
+    def title(t):
+        out("\n" + "=" * 70 + f"\n  {t}\n" + "=" * 70)
+
+    title("THE MORNING RUN  ·  9 Nov  ·  11 countries  ·  mock data")
+    out("  Before steering, it checks the data can be trusted.")
+    out("  Raises are frozen in: " + ", ".join(f"{c} ({why})" for c, why in sorted(frozen.items())))
+    out("\n  Country   Budget    On course for   Pace")
+    for c, r in rows.items():
+        flag = "  <" if c in ("DE", "NL") else ""
+        out(f"  {c:<8} {r['budget']:>7,}   {r['projected']:>12,}   {r['pace_pct']:>3}%{flag}")
+    pause()
+
+    title("PROBLEM 1  ·  GERMANY  ·  Performance Max sales collapsed")
+    r = rootcause.investigate(data, collapses[0])
+    out(f"  Shopify sales from DE PMax: {r['shopify_per_day_before']:,} EUR a day  ->  {r['shopify_per_day_now']:,}"
+        f"  (down {r['drop_pct']}% since {r['drop_started']})\n")
+    out("  Every likely cause, tested against the data:")
+    for c in r["causes"]:
+        out(f"   [{c['status']:<11}] {c['cause']}")
+    out("\n  Why: " + r["causes"][0]["evidence"])
+    pause()
+
+    title("PROBLEM 2  ·  FRANCE  ·  Meta counts every sale twice")
+    t = next(x for x in issues if x["country"] == "FR")
+    out(f"  Meta says ROAS     {t['platform_roas_7d']}")
+    out(f"  Shopify says ROAS  {t['shopify_roas_7d']}")
+    out(f"\n  {t['orders_sent_by_two_pixels']} of {t['orders_checked']} orders reached Meta from two pixels: {', '.join(t['pixels'])}")
+    out("  A system that trusts Meta would raise France here.")
+    out("  This one freezes raises in France and gives Jonas the task.")
+    pause()
+
+    title("PROBLEM 3  ·  NETHERLANDS  ·  overspending its month")
+    nl = next(i for i in q.items() if i["entity"] == "NL Prospecting" and i["kind"] == "budget_change")
+    out(f"  Proposal: {nl['title']}\n")
+    for sentence in nl["reason"].split(". "):
+        out("  " + sentence.strip().rstrip(".") + ".")
+    pause()
+
+    title("THE APPROVAL  ·  only a named person can approve money")
+    try:
+        q.approve(nl["id"], "freja")
+    except PermissionError:
+        out("  Freja tries to approve   ->  REFUSED, she cannot approve money")
+    q.approve(nl["id"], "mikkel")
+    out("  Mikkel approves          ->  recorded with his name and the time")
+    executor.apply(q, api, cfg, nl["id"], TODAY, actor="system", frozen=frozen)
+    out(f"  Dry run                  ->  platform would store {nl['new_value']:.0f}")
+    out(f"  Applied, then read back  ->  platform holds {api.get('meta', 'NL Prospecting'):.0f}. Done.")
+    out(f"  Old value {nl['old_value']:.0f} saved, so it can be undone.")
+    pause()
+
+    title("SAFETY  ·  undo, and a write that did not stick")
+    uid = executor.propose_undo(q, api, nl["id"], "mikkel")
+    q.approve(uid, "mikkel")
+    executor.apply(q, api, cfg, uid, TODAY, actor="system", frozen=frozen)
+    out(f"  Undo, approved by Mikkel  ->  back to {api.get('meta', 'NL Prospecting'):.0f}, read back, done")
+    api.drop_next_write = True
+    live = api.get("meta", "NL Prospecting")
+    rid = q.propose("budget_change", f"Safety check: lower NL Prospecting to {live * 0.95:.0f} (the platform drops this write)",
+                    "Shows what happens when the platform says OK but never saves the change.", {}, "auto",
+                    dedupe_key="show:drop", platform="meta",
+                    entity="NL Prospecting", country="NL", field="daily_budget", old_value=live,
+                    new_value=round(live * 0.95, 2))
+    executor.apply(q, api, cfg, rid, TODAY, actor="system", frozen=frozen)
+    out(f"  Platform said OK but kept {api.get('meta', 'NL Prospecting'):.0f}  ->  caught on read back, marked FAILED, owner told")
+    pause()
+
+    title("CLAUDE  ·  two small jobs, both checked by code")
+    a_lines = []
+    weekly(cfg, data, api, q, out=a_lines.append, claude=claude)
+    out("  1. Search terms nobody buying a plush toy would type:")
+    for n in [i for i in q.items() if i["kind"] == "add_negative"]:
+        ev = json.loads(n["evidence"])
+        out(f"     '{ev['search_term']}'  ->  negative '{ev['negative']}'")
+    out("\n  2. The Monday summary for Slack:")
+    block = next(x for x in a_lines if x.startswith("\nMonday summary"))
+    head, _, body = block.strip().partition("\n")
+    out("     " + head.replace("Monday summary for Slack ", "").rstrip(":"))
+    out("     " + body)
+    pause()
+
+    title("ONE QUEUE  ·  every item has an owner and a deadline")
+    show_queue(q, out=out)
+    out("\n  Five ways this breaks in production, with a guard and a test for each: FAILURE_MODES.md")
+
+
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("cmd", choices=["daily", "weekly", "queue", "approve", "reject", "apply", "undo", "demo", "rootcause"])
+    p.add_argument("cmd", choices=["daily", "weekly", "queue", "approve", "reject", "apply", "undo", "demo", "show", "rootcause"])
     p.add_argument("id", nargs="?", type=int)
     p.add_argument("--as", dest="person")
     a = p.parse_args()
     if a.cmd == "demo":
         return demo()
+    if a.cmd == "show":
+        return show()
     cfg, data, api, q = setup()
     if a.cmd == "daily":
         daily(cfg, data, api, q)

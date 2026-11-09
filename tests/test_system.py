@@ -304,3 +304,17 @@ def test_overlap_is_measured_only_where_tracking_is_healthy(env):
     api, q = env
     a = audit.run(DATA, q, TODAY)
     assert a["overclaim"]["countries"] == 10 and a["overclaim"]["high_x"] < 1.5
+
+
+def test_presenter_mode_runs_and_shows_all_parts():
+    from steer import cli
+    lines = []
+    cli.show(out=lines.append, pause=lambda: None)
+    text = "\n".join(lines)
+    for must in ["PROBLEM 1", "PROBLEM 2", "PROBLEM 3", "REFUSED", "read back", "caught on read back", "ONE QUEUE"]:
+        assert must in text, must
+
+
+def test_names_given_to_claude_hold_no_digits():
+    from steer.cli import _no_digits
+    assert _no_digits("SE Prospecting ad 1 (bear video)") == "SE Prospecting (bear video)"
